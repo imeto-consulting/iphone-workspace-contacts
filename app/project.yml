@@ -22,6 +22,15 @@ targets:
     info:
       path: Sources/Info.plist
       properties:
+        # Version is driven by the MARKETING_VERSION / CURRENT_PROJECT_VERSION build
+        # settings below — single source of truth. The TestFlight script overrides the
+        # build number per upload (TestFlight requires it to increase every time).
+        # Without these two lines XcodeGen hardcodes CFBundleShortVersionString=1.0 / 1.
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        # Only standard HTTPS (via Google Sign-In / People API) — exempt encryption.
+        # Declaring this skips the export-compliance prompt on every TestFlight build.
+        ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false

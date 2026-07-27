@@ -20,14 +20,24 @@ beta: **Apple Business Manager + MDM** pushes the app silently to managed iPhone
 per-user invite and no expiry. Recommended shape: **TestFlight now → ABM/MDM for GA.** Both use
 the same signed build; only the delivery differs. See Stage 5 note.
 
+**MDM licensing caveat (verified 2026-07-26):** Imeto's current **Google Workspace Business**
+edition does **not** include company-owned iOS device management — Google's
+[docs](https://knowledge.workspace.google.com/admin/devices/set-up-company-owned-ios-device-management)
+gate it to Enterprise / Frontline / Education / **Cloud Identity Premium**. The silent path
+therefore needs one of: the **Cloud Identity Premium** add-on (per-user, keeps Business) with
+Google as the MDM, **or** a standalone MDM (Apple Business Essentials / Jamf / Kandji / Mosyle /
+Intune). All routes also require **ABM + ADE + Apple VPP** and distributing this app as an **ABM
+Custom App** (separate App Review). A real project with licensing cost — not needed for the
+TestFlight beta.
+
 ---
 
 ## The gate — CLEARED ✅
 
-- [x] 🧑 Enroll Imeto in the Apple Developer Program → org **Team ID** exists. The one thing
-      still needed from you before an archive: **paste the 10-char Team ID** (or
-      `export DEVELOPMENT_TEAM=…` before `xcodegen generate`). It never gets committed — it
-      lands only in the gitignored generated `.xcodeproj`.
+- [x] 🧑 Enroll Imeto in the Apple Developer Program → org **Team ID provided** and wired via
+      `DEVELOPMENT_TEAM` (read at `xcodegen generate` time; lands only in the gitignored
+      `.xcodeproj`, never committed). Signing verified against the org team (Xcode account
+      signed in; `Apple Distribution: Imeto Consulting AB`).
 
 ---
 
@@ -62,21 +72,35 @@ directory list.
 - [x] 🤖 Parameterized the team in `app/project.yml`: `DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}`
       + `CODE_SIGN_STYLE: Automatic`. The env value is read at `xcodegen generate` time and only
       reaches the gitignored `.xcodeproj` — **never committed**.
-- [ ] 🧑 Register the app's bundle id `com.imeto.workspacecontacts.app` in the Developer portal
-      and let Xcode manage the distribution profile under the org team.
+- [x] 🤖 Bundle id `com.imeto.workspacecontacts.app` **auto-registered** and the Apple
+      Distribution cert + App Store profile created by the pipeline's export step
+      (`-allowProvisioningUpdates`). Signed a real `.ipa` — **no device needed**: we archive
+      *unsigned* (`CODE_SIGNING_ALLOWED=NO`) and sign for distribution at export, so the "team
+      has no devices" error never applies (dev-portal device registration is only for
+      development/ad-hoc builds, not App Store/TestFlight).
 
 ## Stage 4 — App Store Connect + first build (needs the account)
 
-- [ ] 🧑 Create the App Store Connect app record (bundle id above).
-- [ ] 🧑/🤖 Archive (`xcodebuild archive` + export) and upload the first build.
-- [ ] 🧑 Fill App Privacy (from Stage 2), add the privacy policy URL.
+- [x] 🧑 App Store Connect app record created — app id `6794820862`, bundle id above.
+- [x] 🤖 Archive + export pipeline built & verified: [`scripts/build-testflight.sh`](../../scripts/build-testflight.sh)
+      produces a distribution-signed `.ipa` device-free. It reads `DEVELOPMENT_TEAM` from the env,
+      writes only into gitignored `app/build/`, and bumps the build number via `BUILD_NUMBER`
+      (TestFlight needs a higher one each upload).
+- [x] 🤖 **First build uploaded** — v0.1.0 (build 1). Signing + upload both go through the
+      account signed into Xcode (Account Holder). **No API key needed**: an App Manager key
+      can't cloud-sign (`Cloud signing permission error`); only an Admin key could, so the
+      signed-in account is the path. Upload result: `Upload succeeded. Uploaded WorkspaceContacts`.
+- [ ] 🧑 Fill App Privacy (from Stage 2), add the privacy policy URL. *Only needed before
+      **external** testing / App Store — internal testing works without it.*
 
 ## Stage 5 — TestFlight testers + invites
 
 - [ ] 🧑 Add **internal testers** (up to 100, App Store Connect users) — no beta review,
       fastest path for a first real-device check.
-- [ ] 🧑 For wider rollout, add an **external test group** (email or public link, up to 10k) —
-      this needs a one-time light **beta review** and beta test info (the Stage 2 assets cover it).
+- [ ] 🧑 For wider rollout (all of Imeto), add an **external test group** with a **public link**
+      (up to 10k) — needs a one-time **Beta App Review**. Full runbook + paste-ready test info and
+      reviewer notes (incl. the demo-account workaround for the Internal-OAuth sign-in that
+      reviewers otherwise can't pass): [`../rollout/external-testflight.md`](../rollout/external-testflight.md).
 - [x] 🤖 Onboarding note drafted → [`../rollout/onboarding.md`](../rollout/onboarding.md)
       (install → sign in → allow Contacts → "Enable & sync" → the iCloud-propagation caveat).
 
@@ -97,14 +121,19 @@ directory list.
   handle this; the onboarding note must state it plainly.
 - Never commit the org Team ID to the shared repo (same rule that kept the personal team out).
 
-## Status — all 🤖 pre-enrollment prep is DONE
+## Status — first build is on TestFlight; only the on-device proof remains
 
-Icon, privacy manifest, privacy policy draft, App Privacy answers, signing parameterization, and
-the onboarding note are committed and the app builds clean. What remains is all 🧑 and all needs
-the enrolled account:
+Team ID provided; the build pipeline ([`scripts/build-testflight.sh`](../../scripts/build-testflight.sh))
+archives + distribution-signs a real `.ipa` **device-free** and uploads via the signed-in Xcode
+account. **v0.1.0 build 1 is uploaded** (`Upload succeeded`) and processing in App Store Connect
+(app id `6794820862`). What remains (**no physical device is needed until step 3**):
 
-1. **Give me the Team ID** (or set `DEVELOPMENT_TEAM`) → I produce a signed archive.
-2. Register the bundle id + create the App Store Connect record (Stage 3–4).
-3. Upload the build; fill App Privacy from [`../rollout/app-store-privacy.md`](../rollout/app-store-privacy.md) + host the privacy policy.
-4. Add internal testers, install on a real iPhone (Stage 5).
-5. **Stage 6** — the one true end-to-end proof: a real incoming call shows a colleague's name.
+1. 🧑 Once processing finishes (a few min; usually an email), **add yourself as an internal
+   tester** in TestFlight (Stage 5) — no beta review for internal testers.
+2. 🧑 Install via the **TestFlight** app, sign in with `@imeto.com`, allow Contacts, Enable & sync.
+3. 🧑 **Stage 6** — the one true end-to-end proof: have someone in the directory call that iPhone
+   and confirm the colleague's **name shows on the incoming-call screen**. Any Imeto iPhone that
+   installs from TestFlight works — nothing to register. This is the only device-dependent step.
+
+Re-uploads (builds expire every 90 days): `BUILD_NUMBER=2 ./scripts/build-testflight.sh` (bump the
+number each time). Before **external** testing or App Store: fill App Privacy + host the privacy policy.
