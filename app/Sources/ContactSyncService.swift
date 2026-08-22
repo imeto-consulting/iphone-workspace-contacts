@@ -29,7 +29,7 @@ final class ContactSyncService {
 
     /// Diff `people` (the complete directory) against persisted refs and apply.
     func sync(people: [DirectoryPerson]) throws -> ContactSyncSummary {
-        guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
+        guard CNContactStoreWriter.hasWriteAccess else {
             throw ContactSyncError.accessDenied
         }
         let existing = store.load().refs
@@ -59,7 +59,8 @@ final class ContactSyncService {
     }
 
     func removeAll() throws {
-        try writer.removeAll()
+        // Pass the map so removal works even when the group is unavailable (limited access).
+        try writer.removeAll(knownIdentifiers: store.load().refs.map(\.contactIdentifier))
         store.clear()
     }
 }
