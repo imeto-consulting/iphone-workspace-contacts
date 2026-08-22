@@ -90,19 +90,43 @@ directory list.
       account signed into Xcode (Account Holder). **No API key needed**: an App Manager key
       can't cloud-sign (`Cloud signing permission error`); only an Admin key could, so the
       signed-in account is the path. Upload result: `Upload succeeded. Uploaded WorkspaceContacts`.
-- [ ] 🧑 Fill App Privacy (from Stage 2), add the privacy policy URL. *Only needed before
-      **external** testing / App Store — internal testing works without it.*
+- [x] 🤖 **Build 2 uploaded** (v0.1.0 build 2) — carries the contacts-permission fix below.
+      `BUILD_NUMBER=2 ./scripts/build-testflight.sh`; attached to the external group and
+      submitted for review. Each new external build gets its own review pass.
+- [ ] 🧑 Fill App Privacy (from Stage 2), add the privacy policy URL. Privacy page is written and
+      PR'd ([imeto-web#14](https://github.com/imeto-consulting/imeto-web/pull/14) →
+      `imeto.com/workspacecontacts-privacy.html`); merge + deploy, then paste the URL.
+      *Required before App Store release; the beta is running without it.*
 
 ## Stage 5 — TestFlight testers + invites
 
-- [ ] 🧑 Add **internal testers** (up to 100, App Store Connect users) — no beta review,
-      fastest path for a first real-device check.
-- [ ] 🧑 For wider rollout (all of Imeto), add an **external test group** with a **public link**
-      (up to 10k) — needs a one-time **Beta App Review**. Full runbook + paste-ready test info and
-      reviewer notes (incl. the demo-account workaround for the Internal-OAuth sign-in that
-      reviewers otherwise can't pass): [`../rollout/external-testflight.md`](../rollout/external-testflight.md).
+- [x] 🤖 **External group + public link live** — group "Imeto Colleagues"; build 1 **APPROVED**
+      by Beta App Review (2026-08-13). Public link: **https://testflight.apple.com/join/CFqNQQjZ**
+      — one URL for all of Imeto, no per-person invite, testers need no App Store Connect access.
+      Runbook + reviewer notes: [`../rollout/external-testflight.md`](../rollout/external-testflight.md).
+- [x] 🤖 Reviewer sign-in solved — dedicated `applereview@imeto.com` demo account (the app's
+      Internal OAuth means reviewers can't otherwise pass sign-in). **Keep it alive and
+      sign-in-able**: every new external build is re-reviewed. Cloud Identity Free is enough.
+- [x] 🤖 Andreas invited as an external tester (`andreas.tornstrom.andersson@imeto.com`).
+- [ ] 🧑 Share the public link company-wide (e.g. via `everyone@imeto.com` / Slack) once build 2
+      clears review. Teaser copy: [`../rollout/launch-kit.md`](../rollout/launch-kit.md).
+      *Note: a group alias can't be a tester — TestFlight testers are individual Apple IDs, which
+      is exactly why the public link is the mechanism for "everyone".*
 - [x] 🤖 Onboarding note drafted → [`../rollout/onboarding.md`](../rollout/onboarding.md)
       (install → sign in → allow Contacts → "Enable & sync" → the iCloud-propagation caveat).
+
+## Stage 5b — Contacts permission (from real beta feedback)
+
+- [x] 🤖 iOS 18 **limited access** ("Select Contacts") is now a supported path. The sync gate
+      required `.authorized`, so picking the privacy-friendly option threw `accessDenied` and the
+      app synced nothing. It now accepts `.limited` too — we never read the address book, only
+      contacts we created, so limited access is sufficient. Also fixed: the "Imeto Directory"
+      CNGroup was the sole source of truth for *remove all*, so a missing group deleted nothing
+      **yet still cleared the ref map — permanently stranding contacts the app had created**.
+      Removal now works from the group *and* the persisted map. Shipped in build 2.
+- [ ] 🧑 Confirm on a real device that a `.limited` grant still permits the writes. `simctl`
+      cannot produce iOS 18 limited access (`contacts-limited` reports `.authorized`, raw 3), so
+      only a human tapping "Select Contacts" proves it.
 
 ## Stage 6 — The actual end-to-end proof
 
