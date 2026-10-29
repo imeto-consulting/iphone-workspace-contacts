@@ -16,7 +16,7 @@ private func person(_ id: String, given: String, family: String, phone: String) 
 /// issue rather than silently passing.
 @Suite(.serialized) struct CNContactStoreWriterTests {
     private func requireAuthorized() -> Bool {
-        CNContactStore.authorizationStatus(for: .contacts) == .authorized
+        CNContactStoreWriter.hasWriteAccess
     }
 
     @Test func createReadUpdateDelete() throws {
@@ -86,5 +86,38 @@ private func person(_ id: String, given: String, family: String, phone: String) 
             matching: CNContact.predicateForContacts(matchingName: "RemoveAllTest"),
             keysToFetch: [CNContactGivenNameKey as CNKeyDescriptor])
         #expect(mineAfter.isEmpty)
+    }
+
+    /// The map path: a contact we wrote that is NOT in the group (the shape we expect if CNGroup
+    /// is unavailable under iOS 18 limited access) must still be removed via knownIdentifiers.
+    /// Without this, "remove all" would silently orphan contacts.
+    @Test func removeAllDeletesUngroupedKnownIdentifiers() throws {
+        guard requireAuthorized() else {
+            Issue.record("Contacts not authorized; run `xcrun simctl privacy booted grant contacts com.imeto.workspacecontacts.app`.")
+            return
+        }
+        let store = CNContactStore()
+        let writer = CNContactStoreWriter()
+        try writer.removeAll()
+
+        // Write a contact belonging to no group, so only the identifier map can find it.
+        let contact = CNMutableContact()
+        contact.givenName = "Gamma"
+        contact.familyName = "UngroupedTest"
+        let save = CNSaveRequest()
+        save.add(contact, toContainerWithIdentifier: nil)
+        try store.execute(save)
+
+        let before = try store.unifiedContacts(
+            matching: CNContact.predicateForContacts(matchingName: "UngroupedTest"),
+            keysToFetch: [CNContactGivenNameKey as CNKeyDescriptor])
+        #expect(before.count == 1)
+
+        try writer.removeAll(knownIdentifiers: [contact.identifier])
+
+        let after = try store.unifiedContacts(
+            matching: CNContact.predicateForContacts(matchingName: "UngroupedTest"),
+            keysToFetch: [CNContactGivenNameKey as CNKeyDescriptor])
+        #expect(after.isEmpty)
     }
 }

@@ -58,9 +58,12 @@ struct ContentView: View {
             Text("Add colleagues to Contacts")
                 .font(.headline)
             Text("To show colleague names on incoming calls and let you call them by name, "
-                 + "WorkspaceContacts adds them to your device Contacts. These contacts live in "
-                 + "your real address book and may sync to iCloud. You can remove them anytime with "
-                 + "\u{201C}Remove all synced contacts\u{201D}, and signing out removes them.")
+                 + "WorkspaceContacts adds them to your device Contacts. It only manages the "
+                 + "colleagues it adds and never reads the contacts you already have \u{2014} when "
+                 + "iOS asks, \u{201C}Select Contacts\u{201D} works fine, you can share none of your own. "
+                 + "These contacts live in your real address book and may sync to iCloud. You can "
+                 + "remove them anytime with \u{201C}Remove all synced contacts\u{201D}, and signing "
+                 + "out removes them.")
                 .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
             Button("Enable & sync") { Task { await model.enableSyncWithConsent() } }
                 .buttonStyle(.borderedProminent)
